@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar with Floating Text Impact</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #ffffff; }
+        canvas { display: block; }
+    </style>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<script type="module">
+    import * as THREE from 'three';
+
+    // --- CONFIGURATION ---
+    const CARD_WIDTH = 7;
+    const CARD_HEIGHT = 4.5;
+    const GAP = 0.5;
+    const TOTAL_CARDS = 8; 
+    const SPEED = 0.05; 
+    const BLOCK_SIZE = CARD_WIDTH + GAP;
+
+    // --- SCENE SETUP ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff); 
+    scene.fog = new THREE.Fog(0xffffff, 10, 35); // White fog for distance
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 14);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // --- LAYER 1: BASE TEXTURE (White Card + Border) ---
+    function createBaseTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 700;
+        const ctx = canvas.getContext('2d');
+
+        // White Background
+        ctx.fillStyle = '#ffffff'; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Gray Border
+        ctx.strokeStyle = '#eeeeee';
+        ctx.lineWidth = 15;
+        ctx.strokeRect(0, 0, canvas.width, canvas.height);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        return texture;
+    }
+
+    // --- LAYER 2: CONTENT TEXTURE (Transparent Text) ---
+    function createContentTexture(index, text) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 700;
+        const ctx = canvas.getContext('2d');
+
+        // Transparent Background (No fillRect)
+
+        // 1. Purple Number
+        ctx.fillStyle = '#a855f7'; 
+        ctx.font = 'bold 350px Arial'; 
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText((index + 1).toString().padStart(2, '0'), 250, 350);
+
+        // 2. Black Text
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#333333';
+        ctx.font = 'bold 60px Arial';
+        ctx.fillText("How to write", 500, 280);
+        ctx.fillText("engaging", 500, 350);
+        ctx.fillText("tweets", 500, 420);
+
+        // 3. Stats
+        ctx.fillStyle = '#888888';
+        ctx.font = '40px Arial';
+        ctx.fillText("Volume: 210", 500, 550);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.colorSpace = THREE.SRGBColorSpace;
+        return texture;
+    }
+
+    // --- BUILD CAROUSEL ---
+    const cardGroup = new THREE.Group();
+    const cards = [];
+    const data = ["Idea", "Drafting", "Editing", "Review", "Publish", "Analyze", "Optimize", "Repeat"];
+    
+    // Geometry is shared
+    const geometry = new THREE.PlaneGeometry(CARD_WIDTH, CARD_HEIGHT);
+    const baseTexture = createBaseTexture(); // Reuse one texture for all bases
+
+    for (let i = 0; i < TOTAL_CARDS; i++) {
+        // 1. Create Container (Holds both layers)
+        const container = new THREE.Group();
+        container.position.x = i * BLOCK_SIZE;
+
+        // 2. Base Mesh (The White Card)
+        const baseMat = new THREE.MeshBasicMaterial({ map: baseTexture });
+        const baseMesh = new THREE.Mesh(geometry, baseMat);
+        container.add(baseMesh);
+
+        // 3. Content Mesh (The Flying Text)
+        const contentMat = new THREE.MeshBasicMaterial({
+            map: createContentTexture(i, data[i % data.length]),
+            transparent: true, // Crucial for seeing the white card behind
+            opacity: 1
+        });
+        const contentMesh = new THREE.Mesh(geometry, contentMat);
+        
+        // Initial State: Floating slightly above
+        contentMesh.position.z = 0.05; 
+        
+        // Store reference to animate later
+        container.userData = { 
+            content: contentMesh,
+            velocity: 0 // Physics variable for "slam" effect
+        };
+
+        container.add(contentMesh);
+        
+        // Add Border Lines for crispness
+        const border = new THREE.LineSegments(
+            new THREE.EdgesGeometry(geometry),
+            new THREE.LineBasicMaterial({ color: 0xd1d5db })
+        );
+        container.add(border);
+
+        cardGroup.add(container);
+        cards.push(container);
+    }
+
+    // Perspective Angle
+    cardGroup.rotation.y = -Math.PI / 6; 
+    cardGroup.position.x = -6; 
+    scene.add(cardGroup);
+
+    // --- ANIMATION LOOP ---
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // Find the right-most limit to reset cards
+        let rightBound = -Infinity;
+        cards.forEach(c => { if(c.position.x > rightBound) rightBound = c.position.x; });
+
+        cards.forEach((card) => {
+            // 1. Move Left
+            card.position.x -= SPEED;
+
+            // 2. FLY IN ANIMATION LOGIC
+            const content = card.userData.content;
+            
+            // "Activation Zone": When card is resetting or entering from right
+            // We animate Z position: High -> Low
+            
+            // If card is far right (just spawned/reset), push text out to Z=4
+            // We use a range (e.g., x > 15) to trigger the "floating" state
+            if (card.position.x > 10) {
+                 // Hovering waiting to slam
+                 // We use linear interpolation (lerp) to keep it floating at ~3.0
+                 content.position.z = THREE.MathUtils.lerp(content.position.z, 3.0, 0.1);
+                 content.material.opacity = 0; // Invisible while resetting
+            } 
+            // As it enters view (x < 10), Slam it down!
+            else {
+                // Slam logic: Move towards 0.05 (surface) fast
+                const targetZ = 0.05;
+                
+                // Simple easing
+                content.position.z += (targetZ - content.position.z) * 0.1;
+                
+                // Fade in
+                content.material.opacity += (1 - content.material.opacity) * 0.1;
+            }
+
+            // 3. Infinite Scroll Reset
+            if (card.position.x < -BLOCK_SIZE * 2) {
+                // Move to end of line
+                card.position.x = rightBound + BLOCK_SIZE;
+                
+                // RESET ANIMATION:
+                // Push text WAY out so it can fly in again next time
+                content.position.z = 5.0; 
+                content.material.opacity = 0;
+            }
+        });
+
+        renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Handle Resize
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>

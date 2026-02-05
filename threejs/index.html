@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Squad - Fixed</title>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background-color: #0f0f0f;
+            color: #e3e3db;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Barlow Condensed', sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* --- IMAGES CONTAINER --- */
+        .profile-images {
+            position: relative;
+            z-index: 10; /* Top layer to receive mouse events */
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px; /* Space between images and text */
+        }
+
+        .img {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            filter: grayscale(1);
+            transition: filter 0.3s;
+        }
+
+        .img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .img:hover { filter: grayscale(0); }
+
+        /* --- TEXT CONTAINER --- */
+        .profile-names {
+            position: relative;
+            width: 100%;
+            height: 200px; /* Fixed height for text area */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1; 
+            pointer-events: none; /* Let clicks pass through */
+        }
+
+        .name {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            text-align: center;
+            overflow: hidden; /* CRITICAL: Hides letters when they move out */
+        }
+
+        .name h1 {
+            font-size: 15vw; /* Big but fits screen */
+            text-transform: uppercase;
+            line-height: 0.9;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            gap: 2px; /* Tight spacing like design */
+        }
+
+        /* COLORS */
+        .name.default h1 { color: #e3e3db; } /* White */
+        .name:not(.default) h1 { color: #ff3333; } /* Red */
+
+        /* ANIMATION STATES */
+        .letter {
+            display: inline-block;
+            will-change: transform;
+        }
+
+        /* Default: "The Squad" is visible (y:0), others are hidden down (y:100%) */
+        .name.default .letter { transform: translateY(0%); }
+        .name:not(.default) .letter { transform: translateY(100%); }
+
+    </style>
+</head>
+<body>
+
+    <div class="profile-images">
+        <div class="img"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop" alt="Colin"/></div>
+        <div class="img"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop" alt="Liam"/></div>
+        <div class="img"><img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop" alt="Tyson"/></div>
+        <div class="img"><img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop" alt="Max"/></div>
+        <div class="img"><img src="https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=150&h=150&fit=crop" alt="Everest"/></div>
+        <div class="img"><img src="https://images.unsplash.com/photo-1552058544-f2b08422138a?w=150&h=150&fit=crop" alt="Simon"/></div>
+        <div class="img"><img src="https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?w=150&h=150&fit=crop" alt="Gideon"/></div>
+        <div class="img"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop" alt="Benton"/></div>
+    </div>
+
+    <div class="profile-names">
+        <div class="name default"><h1>The Squad</h1></div>
+        
+        <div class="name"><h1>Colin</h1></div>
+        <div class="name"><h1>Liam</h1></div>
+        <div class="name"><h1>Tyson</h1></div>
+        <div class="name"><h1>Max</h1></div>
+        <div class="name"><h1>Everest</h1></div>
+        <div class="name"><h1>Simon</h1></div>
+        <div class="name"><h1>Gideon</h1></div>
+        <div class="name"><h1>Benton</h1></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+
+    <script>
+        // 1. Text Splitter Helper
+        function splitTextIntoSpans(selector) {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(element => {
+                const text = element.innerText;
+                const chars = text.split("");
+                element.innerHTML = "";
+                chars.forEach(char => {
+                    const span = document.createElement("span");
+                    span.classList.add("letter");
+                    // Preserve space width
+                    span.innerHTML = char === " " ? "&nbsp;" : char; 
+                    element.appendChild(span);
+                });
+            });
+        }
+
+        // Run Splitter
+        splitTextIntoSpans(".name h1");
+
+        // 2. Setup Animation Logic
+        const images = document.querySelectorAll(".img");
+        const names = document.querySelectorAll(".name");
+        
+        // "The Squad" is index 0
+        const defaultName = names[0]; 
+        const defaultLetters = defaultName.querySelectorAll(".letter");
+        
+        // Initial State Check
+        gsap.set(defaultLetters, { y: "0%" });
+        names.forEach((name, i) => {
+            if(i > 0) gsap.set(name.querySelectorAll(".letter"), { y: "100%" });
+        });
+
+        images.forEach((img, index) => {
+            // Mapping: Image 0 -> Name 1 (Colin), etc.
+            const targetName = names[index + 1]; 
+            const targetLetters = targetName.querySelectorAll(".letter");
+
+            img.addEventListener("mouseenter", () => {
+                // Expand Image
+                gsap.to(img, { width: 140, height: 140, duration: 0.4, ease: "power2.out" });
+                
+                // Animate "The Squad" OUT (Go UP)
+                gsap.to(defaultLetters, {
+                    y: "-100%", 
+                    duration: 0.4, 
+                    stagger: 0.02, 
+                    ease: "power2.inOut",
+                    overwrite: true // Important: Stops conflicting animations
+                });
+
+                // Animate Name IN (Come UP from bottom)
+                gsap.fromTo(targetLetters, 
+                    { y: "100%" }, 
+                    { y: "0%", duration: 0.4, stagger: 0.02, ease: "power2.out", delay: 0.1, overwrite: true }
+                );
+            });
+
+            img.addEventListener("mouseleave", () => {
+                // Shrink Image
+                gsap.to(img, { width: 60, height: 60, duration: 0.4, ease: "power2.out" });
+
+                // Animate Name OUT (Go DOWN)
+                gsap.to(targetLetters, {
+                    y: "100%", 
+                    duration: 0.4, 
+                    stagger: 0.02, 
+                    ease: "power2.inOut",
+                    overwrite: true
+                });
+
+                // Animate "The Squad" IN (Come DOWN from top)
+                gsap.fromTo(defaultLetters, 
+                    { y: "-100%" }, 
+                    { y: "0%", duration: 0.4, stagger: 0.02, ease: "power2.out", delay: 0.1, overwrite: true }
+                );
+            });
+        });
+    </script>
+</body>
+</html>

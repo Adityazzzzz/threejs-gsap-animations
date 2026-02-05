@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Calendar Zoom</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #fdfdfd; font-family: 'Inter', sans-serif; }
+        
+        #ui-container {
+            position: absolute; bottom: 40px; width: 100%; text-align: center;
+            pointer-events: none; z-index: 10;
+        }
+
+        #controls {
+            display: inline-flex; gap: 12px; align-items: center;
+            background: rgba(255, 255, 255, 0.9); padding: 10px 20px; 
+            border-radius: 16px; backdrop-filter: blur(20px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1); border: 1px solid rgba(0,0,0,0.05);
+            pointer-events: auto;
+        }
+
+        button {
+            padding: 10px 24px; background: #111; color: white;
+            border: none; border-radius: 10px; font-weight: 600; cursor: pointer;
+            transition: transform 0.2s; font-size: 13px; letter-spacing: 0.5px;
+        }
+        button:hover { transform: translateY(-2px); }
+        
+        input {
+            padding: 8px; border-radius: 8px; border: 1px solid #ddd;
+            width: 45px; text-align: center; font-weight: 700; font-size: 15px; outline: none;
+            color: #333; background: #fff;
+        }
+        
+        label { display: flex; align-items: center; gap: 8px; color: #555; font-size: 13px; font-weight: 600; }
+    </style>
+    
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+<div id="ui-container">
+    <div id="controls">
+        <label>
+            DATE
+            <input type="number" id="dateInput" value="5" min="1" max="28">
+        </label>
+        <button id="playBtn">ZOOM</button>
+        <button id="resetBtn" style="background: #f0f0f0; color: #444;">RESET</button>
+    </div>
+</div>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+    // --- 1. SETUP VARIABLES (Fixed Order) ---
+    const mouse = new THREE.Vector2(0, 0); // Defined FIRST to avoid error
+    let TARGET_DATE = 5; 
+    const ZOOM_DURATION = 1.6;
+    let state = "IDLE";
+    let animStartTime = 0;
+
+    // --- 2. SCENE & CAMERA ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xfcfcfc); 
+    scene.fog = new THREE.Fog(0xfcfcfc, 15, 45);
+
+    const camera = new THREE.PerspectiveCamera(35, window.innerWidth/window.innerHeight, 0.1, 100);
+    const CAM_START = new THREE.Vector3(0, 0, 30);
+    camera.position.copy(CAM_START);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+    document.body.appendChild(renderer.domElement);
+
+    // --- 3. LIGHTING (Adjusted for Visibility) ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    keyLight.position.set(8, 15, 10);
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(2048, 2048);
+    keyLight.shadow.bias = -0.0001;
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xeef2ff, 0.4);
+    fillLight.position.set(-5, 5, 5);
+    scene.add(fillLight);
+
+    // --- 4. ASSETS ---
+    function createNumberTexture(num, isTarget) {
+        const size = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Background
+        ctx.fillStyle = '#ffffff'; 
+        ctx.fillRect(0,0,size,size);
+
+        // Text
+        ctx.fillStyle = isTarget ? '#9333ea' : '#333333'; 
+        ctx.font = 'bold 200px "Inter", sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(num, size/2, size/2);
+        
+        // Border
+        ctx.strokeStyle = isTarget ? '#d8b4fe' : '#f0f0f0';
+        ctx.lineWidth = 15;
+        ctx.strokeRect(0,0,size,size);
+        
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 4;
+        return tex;
+    }
+
+    function createHeader() {
+        const canvas = document.createElement('canvas'); canvas.width=1024; canvas.height=256;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#222'; ctx.font = '800 130px "Inter", sans-serif'; ctx.textAlign='center';
+        ctx.letterSpacing = "20px";
+        ctx.fillText("FEBRUARY", 512, 180);
+        const tex = new THREE.CanvasTexture(canvas); tex.colorSpace = THREE.SRGBColorSpace;
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(8, 2), new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity: 0.8}));
+        mesh.position.set(0, 5.5, 0);
+        return mesh;
+    }
+
+    // --- 5. BUILD CALENDAR ---
+    const calendarGroup = new THREE.Group();
+    scene.add(calendarGroup);
+    calendarGroup.add(createHeader());
+
+    // Shadow Plane (Darker for better visibility)
+    const shadowPlane = new THREE.Mesh(
+        new THREE.PlaneGeometry(40, 40),
+        new THREE.ShadowMaterial({ opacity: 0.08, color: 0x000000 })
+    );
+    shadowPlane.position.z = -0.5;
+    shadowPlane.receiveShadow = true;
+    calendarGroup.add(shadowPlane);
+
+    const tiles = [];
+    
+    function buildGrid() {
+        tiles.forEach(t => calendarGroup.remove(t.mesh));
+        tiles.length = 0;
+
+        const COLS = 7;
+        const TILE_SIZE = 2.1;
+        const GAP = 0.25;
+        const startX = -((COLS * (TILE_SIZE + GAP)) / 2) + TILE_SIZE/2;
+        const startY = 3.0; 
+
+        const geometry = new RoundedBoxGeometry(TILE_SIZE, TILE_SIZE, 0.15, 4, 0.05);
+
+        let day = 1;
+        for(let r=0; r<5; r++) { 
+            for(let c=0; c<COLS; c++) {
+                if(day > 28) break;
+
+                const isTarget = (day === TARGET_DATE);
+                
+                const material = new THREE.MeshPhysicalMaterial({
+                    map: createNumberTexture(day, isTarget),
+                    color: 0xffffff,
+                    roughness: 0.3, 
+                    metalness: 0.1,
+                    clearcoat: 0.5,
+                    emissive: isTarget ? 0x9333ea : 0x000000,
+                    emissiveIntensity: 0
+                });
+
+                const mesh = new THREE.Mesh(geometry, material);
+                const x = startX + (c * (TILE_SIZE + GAP));
+                const y = startY - (r * (TILE_SIZE + GAP));
+                
+                mesh.position.set(x, y, 0);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                calendarGroup.add(mesh);
+                tiles.push({ mesh, day, basePos: new THREE.Vector3(x,y,0), isTarget });
+                day++;
+            }
+        }
+    }
+    buildGrid();
+
+    // --- 6. ANIMATION ---
+    function easeOutExpo(x) { return x === 1 ? 1 : 1 - Math.pow(2, -10 * x); }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const now = performance.now() / 1000;
+
+        if (state === "IDLE") {
+            // Mouse Parallax Logic (Safe now)
+            const targetRotX = mouse.y * 0.05;
+            const targetRotY = mouse.x * 0.05;
+            calendarGroup.rotation.x += (targetRotX - calendarGroup.rotation.x) * 0.05;
+            calendarGroup.rotation.y += (targetRotY - calendarGroup.rotation.y) * 0.05;
+        }
+
+        if (state === "ZOOMING") {
+            const elapsed = now - animStartTime;
+            let p = Math.min(elapsed / ZOOM_DURATION, 1);
+            const t = easeOutExpo(p);
+
+            const target = tiles.find(t => t.day === TARGET_DATE);
+            
+            if(target) {
+                const targetPos = new THREE.Vector3(target.basePos.x, target.basePos.y, 6.0);
+                camera.position.lerpVectors(CAM_START, targetPos, t);
+                
+                calendarGroup.rotation.x = THREE.MathUtils.lerp(calendarGroup.rotation.x, 0, 0.1);
+                calendarGroup.rotation.y = THREE.MathUtils.lerp(calendarGroup.rotation.y, 0, 0.1);
+
+                target.mesh.position.z = THREE.MathUtils.lerp(0, 2.0, t);
+                target.mesh.rotation.x = THREE.MathUtils.lerp(0, -0.2, t);
+                target.mesh.rotation.y = THREE.MathUtils.lerp(0, 0.15, t);
+                target.mesh.material.emissiveIntensity = THREE.MathUtils.lerp(0, 0.6, t);
+
+                tiles.forEach(tile => {
+                    if(!tile.isTarget) {
+                        tile.mesh.position.z = THREE.MathUtils.lerp(0, -0.5, t);
+                        // Dim slightly
+                        tile.mesh.material.color.setHSL(0, 0, 1.0 - (t * 0.15));
+                    }
+                });
+            }
+            if(p === 1) state = "DONE";
+        }
+
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // --- 7. EVENTS ---
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    });
+
+    document.getElementById('playBtn').addEventListener('click', () => {
+        TARGET_DATE = parseInt(document.getElementById('dateInput').value);
+        buildGrid(); 
+        camera.position.copy(CAM_START);
+        state = "ZOOMING";
+        animStartTime = performance.now() / 1000;
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        state = "IDLE";
+        camera.position.copy(CAM_START);
+        tiles.forEach(t => {
+            t.mesh.position.copy(t.basePos);
+            t.mesh.rotation.set(0,0,0);
+            t.mesh.material.emissiveIntensity = 0;
+            t.mesh.material.color.setHex(0xffffff);
+        });
+    });
+
+    window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+</script>
+</body>
+</html>
