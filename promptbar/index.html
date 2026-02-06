@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoGPT - 3D Prompt Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* 1. BACKGROUND VIDEO */
+        #bg-video {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            z-index: 0;
+            opacity: 0.6; /* Dimmed to let UI pop */
+        }
+
+        /* 2. THE THREE.JS CONTAINER */
+        #container {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1;
+            pointer-events: none; /* Let clicks pass through to 3D objects */
+        }
+
+        /* 3. THE UI CARD DESIGN (Matched to image_926200.png) */
+        /* This is hidden initially, Three.js will grab it and put it in 3D */
+        #ui-card {
+            width: 700px;
+            /* Dark Background */
+            background: #121212; 
+            border: 1px solid #333;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px; /* Space between text and bottom bar */
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+            pointer-events: auto; /* Re-enable clicks */
+            user-select: none;
+        }
+
+        /* Text Area */
+        .input-area {
+            font-size: 18px;
+            line-height: 1.5;
+            color: #fff;
+            min-height: 28px;
+            position: relative;
+        }
+
+        .placeholder {
+            position: absolute;
+            top: 0; left: 0;
+            color: #666;
+            pointer-events: none;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 2px; height: 18px;
+            background: #3b82f6;
+            margin-left: 2px;
+            vertical-align: middle;
+            animation: blink 1s infinite;
+        }
+
+        /* Bottom Toolbar */
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Icons */
+        .icon-btn {
+            width: 32px; height: 32px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .icon-btn:hover { background: #2a2a2a; }
+        .icon-btn svg { width: 20px; height: 20px; stroke: #888; fill: none; stroke-width: 2; }
+
+        .right-tools {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Generate Button */
+        .generate-btn {
+            background: #e5e5e5; /* Off-white */
+            color: #000;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+        }
+        .generate-btn:hover { background: #fff; transform: scale(1.02); }
+        .generate-btn svg { width: 16px; height: 16px; stroke: #000; }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <video id="bg-video" autoplay loop muted playsinline>
+        <source src="https://assets.mixkit.co/videos/preview/mixkit-waterfall-in-forest-2213-large.mp4" type="video/mp4">
+    </video>
+
+    <div id="ui-card">
+        <div class="input-area">
+            <span class="placeholder" id="placeholder">Start typing a prompt...</span>
+            <span id="typed-text"></span><span class="cursor"></span>
+        </div>
+
+        <div class="toolbar">
+            <div class="icon-btn">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+            </div>
+
+            <div class="right-tools">
+                <div class="icon-btn">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M15 4V2"></path>
+                        <path d="M15 16v-2"></path>
+                        <path d="M8 9h2"></path>
+                        <path d="M20 9h2"></path>
+                        <path d="M17.8 11.8L19 13"></path>
+                        <path d="M15 9l0 0"></path>
+                        <path d="M17.8 6.2L19 5"></path>
+                        <path d="M3 21l9-9"></path>
+                        <path d="M12.2 6.2L11 5"></path>
+                    </svg>
+                </div>
+                <div class="icon-btn">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                </div>
+                <div class="generate-btn">
+                    Generate
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-5.82 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="container"></div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
+
+        // --- CONFIGURATION ---
+        const PROMPT_TEXT = "A cinematic nature reel of a waterfall in the Swiss Alps, 8k resolution, photorealistic lighting...";
+        
+        let camera, scene, renderer;
+        let uiObject; // The 3D wrapper for our HTML
+
+        // Track Mouse
+        let mouseX = 0;
+        let mouseY = 0;
+        const windowHalfX = window.innerWidth / 2;
+        const windowHalfY = window.innerHeight / 2;
+
+        init();
+        animate();
+        typewriter();
+
+        function init() {
+            const container = document.getElementById('container');
+
+            // 1. Scene Setup
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
+            camera.position.set(0, 0, 1000);
+            scene = new THREE.Scene();
+
+            // 2. Create CSS3D Object
+            const element = document.getElementById('ui-card');
+            
+            // Convert DOM element to 3D Object
+            uiObject = new CSS3DObject(element);
+            uiObject.position.set(0, 0, 0);
+            scene.add(uiObject);
+
+            // 3. Setup CSS3DRenderer
+            renderer = new CSS3DRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            // Append renderer to container
+            container.appendChild(renderer.domElement);
+
+            // 4. Events
+            document.addEventListener('mousemove', onDocumentMouseMove);
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        // --- MOUSE TILT LOGIC ---
+        function onDocumentMouseMove(event) {
+            mouseX = (event.clientX - windowHalfX) * 0.5; // Scale down sensitivity
+            mouseY = (event.clientY - windowHalfY) * 0.5;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Smooth Rotation interpolation
+            // Rotate the OBJECT, not the camera, for better control
+            const targetX = THREE.MathUtils.degToRad(mouseY * 0.05); // Tilt Up/Down
+            const targetY = THREE.MathUtils.degToRad(mouseX * 0.05); // Tilt Left/Right
+
+            uiObject.rotation.x += (targetX - uiObject.rotation.x) * 0.1;
+            uiObject.rotation.y += (targetY - uiObject.rotation.y) * 0.1;
+
+            // Subtle Float
+            const time = Date.now() * 0.001;
+            uiObject.position.y = Math.sin(time) * 10;
+
+            renderer.render(scene, camera);
+        }
+
+        // --- TYPEWRITER LOGIC ---
+        function typewriter() {
+            const textSpan = document.getElementById('typed-text');
+            const placeholder = document.getElementById('placeholder');
+            let i = 0;
+
+            function type() {
+                if (i < PROMPT_TEXT.length) {
+                    if (i === 0) placeholder.style.display = 'none'; // Hide placeholder on first key
+                    textSpan.textContent += PROMPT_TEXT.charAt(i);
+                    i++;
+                    setTimeout(type, 40); // Typing Speed
+                }
+            }
+            
+            // Start after delay
+            setTimeout(type, 1000);
+        }
+
+    </script>
+</body>
+</html>
