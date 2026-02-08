@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoGPT - Final Fixed</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background-color: #000000;
+            color: #ffffff;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .text {
+            font-size: 130px;
+            font-weight: 800;
+            letter-spacing: -4px;
+            line-height: 1;
+            z-index: 10;
+        }
+
+        /* --- PIVOT --- */
+        .pivot {
+            position: relative;
+            width: 100px;
+            height: 130px;
+            margin: 0 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .letter-o {
+            position: absolute;
+            font-size: 130px;
+            font-weight: 800;
+            top: 54%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .logo-svg {
+            position: absolute;
+            width: 110px;
+            height: 110px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            opacity: 0;
+        }
+
+        /* --- TOOLS --- */
+        .tools-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 15px;
+            z-index: 5;
+            width: 0;
+            opacity: 0;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .pill {
+            background: #1e1e1e;
+            color: #fff;
+            padding: 14px 28px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            white-space: nowrap;
+            border: 1px solid #333;
+            opacity: 0;
+            transform: scale(0.8);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .pill.active {
+            background: #ffffff;
+            color: #000000;
+            border-color: #fff;
+        }
+        
+        .pill svg { width: 20px; height: 20px; stroke-width: 2.5; }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="text left">PHOT</div>
+
+        <div class="pivot">
+            <div class="letter-o">O</div>
+            
+            <!-- <svg class="logo-svg" viewBox="0 0 100 100" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+                <g transform="translate(50,50)">
+                    <path d="M-12,-20 L28,-20 L40,0 L18,38 Z" transform="rotate(0)" />
+                    <path d="M-12,-20 L28,-20 L40,0 L18,38 Z" transform="rotate(60)" />
+                    <path d="M-12,-20 L28,-20 L40,0 L18,38 Z" transform="rotate(120)" />
+                    <path d="M-12,-20 L28,-20 L40,0 L18,38 Z" transform="rotate(180)" />
+                    <path d="M-12,-20 L28,-20 L40,0 L18,38 Z" transform="rotate(240)" />
+                    <path d="M-12,-20 L28,-20 L40,0 L18,38 Z" transform="rotate(300)" />
+                </g>
+            </svg> -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="14.31" y1="8" x2="20.05" y2="17.94"/><line x1="9.69" y1="8" x2="21.17" y2="8"/><line x1="7.38" y1="12" x2="13.12" y2="2.06"/><line x1="9.69" y1="16" x2="3.95" y2="6.06"/><line x1="14.31" y1="16" x2="2.83" y2="16"/><line x1="16.62" y1="12" x2="10.88" y2="21.94"/></svg>
+            
+        </div>
+        <div class="text right">GPT</div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script>
+        const tl = gsap.timeline({ repeat: -1, repeatDelay: 2, yoyo: true });
+
+        // 1. MORPH: O -> Logo
+        tl.to(".letter-o", {
+            duration: 0.5,
+            scale: 0,
+            opacity: 0,
+            rotation: 180,
+            ease: "power2.in"
+        }, "start")
+        .to(".logo-svg", {
+            duration: 0.8,
+            scale: 1, 
+            opacity: 1,
+            rotation: 0, 
+            ease: "back.out(1.2)"
+        }, "start+=0.2");
+
+        // 2. SPLIT: Text moves apart
+        const gap = 360; 
+        tl.to(".left", {
+            x: -gap,
+            duration: 1.2,
+            ease: "expo.inOut"
+        }, "expand")
+        .to(".right", {
+            x: gap,
+            duration: 1.2,
+            ease: "expo.inOut"
+        }, "expand");
+
+        // 3. REVEAL: Tools
+        tl.to(".tools-wrapper", {
+            width: gap * 2,
+            opacity: 1,
+            duration: 1,
+            ease: "power2.out"
+        }, "expand");
+
+        tl.to(".pill", {
+            opacity: 1,
+            scale: 1,
+            duration: 0.5,
+            stagger: 0.1,
+            ease: "back.out(1.5)"
+        }, "-=0.6");
+    </script>
+</body>
+</html>
