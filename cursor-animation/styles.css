@@ -1,0 +1,113 @@
+*,
+*:before,
+*:after {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+@font-face {
+    font-family: 'Primary';
+    src: url('./fonts/mori-regular.woff') format('woff2'),
+         url('./fonts/mori-regular.woff2') format('woff');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --primary: #fbfbfb;
+    --secondary: #1b1b1b;
+}
+
+html {
+    font-size: max(100vw / 1920 * 10);
+}
+
+body {
+    background-color: var(--primary);
+    color: var(--secondary);
+}
+
+h1 {
+    font-size: 36rem;
+    line-height: 1;
+}
+
+h2 {
+    font-size: 8rem;
+    line-height: 1;
+}
+
+span {
+    font-size: 3.2rem;
+}
+
+.hero {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.hero_wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: inherit;
+    height: inherit;
+    padding: 3rem;
+    position: relative;
+    z-index: 2; /* Text on top */
+    pointer-events: none; /* Mouse passes through to the media layer */
+}
+.hero_wrapper a, .hero_wrapper button {
+    pointer-events: all;
+}
+
+.hero_title {
+    display: inline-flex;
+    align-items: end;
+    margin-bottom: 3rem;
+}
+
+.hero_title span {
+    margin-bottom: 6.8rem; 
+}
+
+.hero_media {
+    position: absolute; /* Changed to absolute to fill the hero container */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1; /* Images behind */
+}
+
+.hero_media img {
+    position: absolute;
+    width: 30rem;
+    height: 40rem;
+    object-fit: cover;
+    pointer-events: none; /* Critical: prevents images from stealing the mousemove event */
+    will-change: transform, opacity; /* Optimization for GSAP */
+}
+
+.hero_media img {
+    position: absolute;
+    width: 30rem;
+    height: 40rem;
+    object-fit: cover;
+    pointer-events: none; /* This ensures the mouse "sees through" the images */
+    z-index: 1;
+}
+
+.hero_wrapper {
+    position: relative;
+    z-index: 2; /* Keeps text above the images */
+    pointer-events: none; 
+}
+
+.hero_wrapper h1, .hero_wrapper span {
+    pointer-events: auto; /* Allows text to be interactive if needed */
+}
