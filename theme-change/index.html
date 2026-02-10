@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plastic Theme Switch</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- RESET & BASICS --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            font-family: 'Clash Display', sans-serif;
+        }
+
+        /* --- CONTAINER --- */
+        .app-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- TOGGLE BUTTON --- */
+        .toggle-btn {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #000;
+            z-index: 100; /* Always on top */
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Icon inside button */
+        .toggle-btn::after {
+            content: '';
+            width: 20px;
+            height: 2px;
+            background: #fff;
+            transition: background 0.3s;
+        }
+
+        /* Hover Effect */
+        .toggle-btn:hover { transform: scale(1.1); }
+
+
+        /* --- LAYERS --- */
+        .layer {
+            position: absolute;
+            top: 0; 
+            left: 0;
+            width: 100%; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px;
+        }
+
+        /* --- LIGHT LAYER (Bottom) --- */
+        .light-layer {
+            background-color: #E6E6E6;
+            color: #111;
+            z-index: 1;
+            align-items: center;
+            text-align: center;
+        }
+
+        .hero-text {
+            font-size: 6vw;
+            line-height: 0.9;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: -2px;
+        }
+
+        /* --- DARK LAYER (Top - Masked) --- */
+        .dark-layer {
+            background-color: #050505;
+            color: #fff;
+            z-index: 2; /* Sits on top */
+            
+            /* THE MAGIC: Start hidden in top-right corner */
+            clip-path: circle(0% at 94% 6%);
+            
+            /* Smooth Expansion Animation */
+            transition: clip-path 1.2s cubic-bezier(0.77, 0, 0.175, 1);
+            
+            /* Layout for Menu */
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Dark Content Styling */
+        .big-logo {
+            font-size: 15vw;
+            font-weight: 300;
+            font-family: serif;
+            font-style: italic;
+        }
+
+        .menu-list {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .menu-item {
+            font-size: 6vw;
+            line-height: 1;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        .menu-item:hover { opacity: 0.5; }
+
+        .footer-info {
+            position: absolute;
+            bottom: 40px;
+            left: 40px;
+            display: flex;
+            gap: 20px;
+            opacity: 0.5;
+            font-size: 14px;
+        }
+
+        /* --- ACTIVE STATE (When button is clicked) --- */
+        body.menu-open .dark-layer {
+            /* Expand circle to cover screen (150% radius) */
+            clip-path: circle(150% at 94% 6%);
+        }
+
+        body.menu-open .toggle-btn {
+            background: #fff; /* Invert button color */
+        }
+        body.menu-open .toggle-btn::after {
+            background: #000; /* Invert icon color */
+            transform: rotate(45deg); /* Turn into X */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <div class="toggle-btn" onclick="toggleMenu()"></div>
+
+        <div class="layer light-layer">
+            <div style="font-size: 1.5rem; margin-bottom: 2rem; font-weight: 500;">Plastic</div>
+            <div class="hero-text">
+                We Transform<br>
+                Ideas Into Digital<br>
+                Outcomes
+            </div>
+        </div>
+
+        <div class="layer dark-layer">
+            <div class="big-logo">C/</div>
+            
+            <div class="menu-list">
+                <div class="menu-item">Work</div>
+                <div class="menu-item">Services</div>
+                <div class="menu-item">About</div>
+                <div class="menu-item">Manifesto</div>
+                <div class="menu-item">Contact</div>
+            </div>
+
+            <div class="footer-info">
+                <span>Privacy Policy</span>
+                <span>Cookie Policy</span>
+                <span>Terms & Conditions</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function toggleMenu() {
+            document.body.classList.toggle('menu-open');
+        }
+    </script>
+
+</body>
+</html>
