@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PhotoGPT Final Interactive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body { 
+            background: #000; 
+            height: 100vh; 
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* --- DASHBOARD WRAPPER --- */
+        .dashboard-container {
+            width: 1400px;
+            height: 850px;
+            background: #0b0b0b;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #222;
+            overflow: hidden;
+            color: #fff;
+            /* Smooth blur transition */
+            transition: all 1s cubic-bezier(0.16, 1, 0.3, 1);
+            transform-origin: center center;
+        }
+
+        /* ACTIVE STATE: Dashboard recedes */
+        .dashboard-container.active-blur {
+            filter: blur(10px) brightness(0.4);
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+
+        /* --- 1. PINK ALERT BAR --- */
+        .alert-bar {
+            height: 48px;
+            background: #ff0055;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; font-size: 13px; color: #fff; font-weight: 500;
+        }
+        .alert-left { display: flex; align-items: center; gap: 8px; }
+        .alert-icon { font-size: 16px; }
+        .alert-link { text-decoration: underline; font-weight: 700; cursor: pointer; margin-left: 4px; }
+        .close-icon { cursor: pointer; font-size: 18px; opacity: 0.8; }
+
+        /* --- LAYOUT --- */
+        .layout { display: flex; flex: 1; height: calc(100% - 48px); }
+
+        /* --- 2. SIDEBAR --- */
+        .sidebar {
+            width: 72px; background: #0b0b0b; border-right: 1px solid #1a1a1a;
+            display: flex; flex-direction: column; align-items: center; padding-top: 24px; gap: 32px;
+        }
+        .logo svg { width: 32px; height: 32px; fill: #fff; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 8px; color: #666; cursor: pointer; width: 100%; position: relative;}
+        .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+        .nav-item span { font-size: 10px; font-weight: 500; text-align: center; }
+        .nav-item.active { color: #fff; }
+        .nav-item.active::before { content: ''; position: absolute; left: 0; top: 0; height: 100%; width: 3px; background: #fff; }
+
+        /* --- 3. MAIN CONTENT --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; background: #0b0b0b; }
+
+        /* HEADER */
+        .header {
+            height: 70px; border-bottom: 1px solid #1a1a1a;
+            display: flex; justify-content: space-between; align-items: center; padding: 0 32px;
+        }
+        .page-title { font-size: 18px; font-weight: 700; }
+        .header-right { display: flex; gap: 12px; align-items: center; }
+        .icon-btn { width: 36px; height: 36px; border-radius: 50%; background: #161616; color: #888; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .credits-pill { background: #111; border: 1px solid #222; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #aaa; display: flex; align-items: center; gap: 6px; }
+        .buy-btn { background: #fff; color: #000; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: url('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100') center/cover; }
+
+        /* WORKSPACE */
+        .workspace { display: flex; flex: 1; }
+
+        /* LEFT SETTINGS */
+        .settings-panel { width: 320px; border-right: 1px solid #1a1a1a; padding: 32px; display: flex; flex-direction: column; gap: 32px; }
+        .setting-group label { display: block; font-size: 12px; font-weight: 600; color: #888; margin-bottom: 12px; }
+        
+        .veo-selector {
+            background: #161616; border: 1px solid #2a2a2a; border-radius: 8px; padding: 14px;
+            display: flex; align-items: center; gap: 12px; cursor: pointer;
+        }
+        .veo-icon { width: 24px; height: 24px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 4px; }
+        .veo-text { font-size: 14px; font-weight: 500; color: #fff; flex: 1; }
+
+        .ratio-row { display: flex; gap: 12px; }
+        .ratio-opt { flex: 1; height: 80px; border: 1px solid #2a2a2a; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+        .ratio-opt.active { border: 1px solid #fff; background: #161616; }
+        .rect-9-16 { width: 12px; height: 20px; border: 1.5px solid #666; border-radius: 2px; }
+        .rect-16-9 { width: 24px; height: 14px; border: 1.5px solid #fff; border-radius: 2px; }
+        .ratio-label { font-size: 11px; font-weight: 600; color: #666; }
+        .ratio-opt.active .ratio-label { color: #fff; }
+
+        .res-switch { display: flex; background: #000; border: 1px solid #2a2a2a; border-radius: 6px; padding: 3px; }
+        .res-item { flex: 1; text-align: center; padding: 8px 0; font-size: 12px; color: #666; cursor: pointer; border-radius: 4px; }
+        .res-item.active { background: #222; color: #fff; font-weight: 600; }
+
+        .slider-wrap { margin-top: 8px; }
+        .track { width: 100%; height: 4px; background: #222; border-radius: 2px; position: relative; }
+        .fill { width: 40%; height: 100%; background: #fff; border-radius: 2px; }
+        .thumb { width: 16px; height: 16px; background: #fff; border-radius: 50%; position: absolute; top: -6px; left: 40%; cursor: pointer; }
+
+        /* CENTER AREA */
+        .center-stage { flex: 1; padding: 50px 80px; position: relative; display: flex; flex-direction: column; }
+        
+        .hero-title { font-size: 20px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; letter-spacing: 0.5px; }
+        .hero-desc { font-size: 14px; color: #888; line-height: 1.6; max-width: 700px; margin-bottom: 50px; }
+
+        .cards-grid { display: flex; gap: 24px; }
+        .feature-card { flex: 1; border: 1px solid #222; background: #111; border-radius: 12px; overflow: hidden; height: 280px; display: flex; flex-direction: column; }
+        
+        .card-visual { flex: 1; background: #000; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;}
+        .img-suit { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; }
+        .img-box { width: 80%; height: 80%; border: 1px solid #a3e635; border-radius: 4px; opacity: 0.8; }
+        .active-border { position: absolute; inset: 0; border: 2px solid #a3e635; border-radius: 12px 12px 0 0; z-index: 2; }
+        
+        .loading-ui { display: flex; gap: 6px; align-items: center; }
+        .bar { width: 12px; height: 12px; border: 1px solid #666; border-radius: 2px; }
+        .bar.green { border-color: #a3e635; }
+        
+        .img-drink { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%) contrast(1.2); }
+
+        .card-content { padding: 20px; background: #0b0b0b; border-top: 1px solid #1a1a1a; }
+        .card-head { font-size: 11px; font-weight: 700; color: #fff; text-transform: uppercase; margin-bottom: 6px; }
+        .card-sub { font-size: 12px; color: #666; line-height: 1.4; }
+
+
+        /* --- 4. BOTTOM PROMPT BAR (THE STAR) --- */
+        .prompt-container {
+            /* Start Position: Bottom Center */
+            position: absolute; 
+            bottom: 50px; left: 50%; 
+            transform: translateX(-50%);
+            width: 800px;
+            z-index: 100;
+            
+            /* The Magic Transition for the Fly Effect */
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .prompt-bar {
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 16px;
+            height: 80px;
+            padding: 0 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: relative;
+            /* Transition for the bar itself (glow, border) */
+            transition: all 0.5s ease;
+        }
+
+        /* Elements inside Prompt Bar */
+        .prompt-left { display: flex; align-items: center; gap: 16px; flex: 1; }
+        .image-icon { color: #444; }
+        .prompt-input { 
+            background: transparent; border: none; outline: none; 
+            color: #666; font-size: 14px; font-weight: 500; width: 100%;
+        }
+
+        .prompt-right { display: flex; align-items: center; gap: 20px; }
+        .add-credits { font-size: 11px; font-weight: 700; color: #666; display: flex; align-items: center; gap: 4px; }
+        
+        .generate-btn {
+            background: #fff; color: #000;
+            padding: 10px 20px; border-radius: 8px;
+            font-size: 13px; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+            cursor: pointer;
+        }
+        .generate-btn svg { width: 14px; height: 14px; fill: #000; }
+
+        /* WAVY LINES BG (Behind bar) */
+        .wavy-lines {
+            position: absolute; bottom: -40px; right: -50px; 
+            width: 100%; height: 200px; pointer-events: none; z-index: -1;
+            opacity: 0.3;
+            transition: opacity 0.5s;
+        }
+        .wave { fill: none; stroke: #a16207; stroke-width: 2; }
+
+
+        /* --- FLY MODE (Active State) --- */
+        /* This class is added via JS to trigger the fly */
+        .prompt-container.flying {
+            bottom: 50%; /* Move to vertical center */
+            transform: translate(-50%, 50%) scale(1.25); /* Center and Scale Up */
+        }
+
+        /* Style changes when flying */
+        .prompt-bar.flying-style {
+            background: rgba(10, 10, 10, 0.9);
+            border-color: #555;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.9);
+            backdrop-filter: blur(20px);
+        }
+
+        /* Hide waves when flying */
+        .prompt-container.flying .wavy-lines {
+            opacity: 0;
+        }
+
+
+        /* --- CURSOR --- */
+        #cursor {
+            position: fixed; top: 0; left: 0; width: 24px; height: 24px;
+            z-index: 9999; pointer-events: none;
+        }
+        #cursor svg { width: 100%; height: 100%; fill: #000; stroke: #fff; stroke-width: 1.5; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container" id="dashboard">
+        
+        <div class="alert-bar">
+            <div class="alert-left">
+                <span class="alert-icon">🚀</span>
+                <span>Heads up! You do not have an active plan. <span class="alert-link">Click here to buy a subscription to continue.</span></span>
+            </div>
+            <div class="close-icon">✕</div>
+        </div>
+
+        <div class="layout">
+            <div class="sidebar">
+                <div class="logo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2" fill="none" stroke="#fff"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="#fff"/></svg></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg><span>Models</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg><span>Image</span></div>
+                <div class="nav-item active"><svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg><span>Video</span></div>
+                <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg><span>Edit</span></div>
+            </div>
+
+            <div class="main-content">
+                <div class="header">
+                    <div class="page-title">Video Generation</div>
+                    <div class="header-right">
+                        <div class="icon-btn">?</div>
+                        <div class="icon-btn">☾</div>
+                        <div class="credits-pill"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"></path></svg> Credits 99</div>
+                        <div class="buy-btn">Buy add-on credits</div>
+                        <div class="avatar"></div>
+                    </div>
+                </div>
+
+                <div class="workspace">
+                    <div class="settings-panel">
+                        <div class="setting-group">
+                            <label>Model</label>
+                            <div class="veo-selector">
+                                <div class="veo-icon"></div>
+                                <div class="veo-text">Google Veo 3.1</div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M6 9l6 6 6-6"></path></svg>
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Aspect Ratio ⓘ</label>
+                            <div class="ratio-row">
+                                <div class="ratio-opt">
+                                    <div class="rect-9-16"></div>
+                                    <span class="ratio-label">9:16</span>
+                                </div>
+                                <div class="ratio-opt active">
+                                    <div class="rect-16-9"></div>
+                                    <span class="ratio-label">16:9</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Resolution ⓘ</label>
+                            <div class="res-switch">
+                                <div class="res-item">720p</div>
+                                <div class="res-item active">1080p</div>
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>Duration ⓘ</label>
+                            <div class="slider-wrap">
+                                <div class="track"><div class="fill"></div><div class="thumb"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <div style="width:16px; height:16px; background:#fff; border-radius:4px; display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg></div>
+                                <span style="font-size:12px; font-weight:600;">Generate Audio ⓘ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="center-stage">
+                        <div class="hero-title">How to get started?</div>
+                        <div class="hero-desc">Generate high fidelity videos with audio using Veo 3.1, Veo 3.1 Fast, and Seedance 1.5 Pro. Total control over your workflow.</div>
+
+                        <div class="cards-grid">
+                            <div class="feature-card">
+                                <div class="card-visual">
+                                    <div class="active-border"></div>
+                                    <img src="https://images.unsplash.com/photo-1599557438340-023a85b96791?w=400" style="width:100%; height:100%; object-fit:cover; opacity:0.8;">
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-head">CHOOSE A MODEL</div>
+                                    <div class="card-sub">Pick a suitable model to generate image using the selector.</div>
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="card-visual">
+                                    <div class="loading-ui">
+                                        <div class="bar green"></div><div class="bar"></div><div class="bar"></div>
+                                        <div style="width:60px; height:2px; background:#444; margin-left:8px;"><div style="width:30px; height:100%; background:#a3e635;"></div></div>
+                                    </div>
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-head">CONFIGURE OPTIONS</div>
+                                    <div class="card-sub">Adjust aspect ratio, resolution, and duration to fit.</div>
+                                </div>
+                            </div>
+
+                            <div class="feature-card">
+                                <div class="card-visual">
+                                    <img src="https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400" class="img-drink">
+                                </div>
+                                <div class="card-content">
+                                    <div class="card-head">WRITE A PROMPT AND GENERATE</div>
+                                    <div class="card-sub">Click generate to create your final video!</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="prompt-container" id="prompt-container">
+                            <div class="prompt-bar" id="prompt-bar">
+                                <div class="prompt-left">
+                                    <div class="image-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+                                    <input type="text" class="prompt-input" placeholder="Type anything, enhance with wand and click generate" readonly id="text-input">
+                                </div>
+                                
+                                <div class="prompt-right">
+                                    <div class="add-credits">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                                        800 CREDITS
+                                    </div>
+                                    <div class="generate-btn">
+                                        Generate
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"/></svg> 
+                                    </div>
+                                </div>
+                            </div>
+
+                            <svg class="wavy-lines" viewBox="0 0 300 100" preserveAspectRatio="none">
+                                <path class="wave" d="M0,50 C50,30 100,70 150,50 C200,30 250,70 300,50"></path>
+                                <path class="wave" d="M0,70 C50,50 100,90 150,70 C200,50 250,90 300,70" style="opacity:0.5; stroke:#d97706;"></path>
+                            </svg>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="cursor">
+        <svg viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path></svg>
+    </div>
+
+    <script src="https://unpkg.com/gsap@3.12.5/dist/gsap.min.js"></script>
+    <script>
+        setTimeout(() => {
+            const cursor = document.getElementById('cursor');
+            const input = document.getElementById('text-input');
+            const dashboard = document.getElementById('dashboard');
+            const promptContainer = document.getElementById('prompt-container');
+            const promptBar = document.getElementById('prompt-bar');
+            
+            // 1. Target Input Box
+            const rect = input.getBoundingClientRect();
+            const targetX = rect.left + 50; // A bit into the text
+            const targetY = rect.top + (rect.height / 2);
+
+            // Init Cursor
+            gsap.set(cursor, { x: window.innerWidth + 50, y: window.innerHeight + 50 });
+
+            const tl = gsap.timeline();
+
+            tl.to(cursor, {
+                x: targetX, y: targetY, duration: 1.2, ease: "power2.out"
+            })
+            // Click
+            .to(cursor, { scale: 0.8, duration: 0.1, yoyo: true, repeat: 1 })
+            
+            // TRANSITION
+            .call(() => {
+                // 1. Blur Dashboard
+                dashboard.classList.add('active-blur');
+                
+                // 2. Hide Cursor
+                cursor.style.opacity = 0;
+                
+                // 3. Fly Prompt Bar Up
+                promptContainer.classList.add('flying');
+                promptBar.classList.add('flying-style');
+            });
+
+        }, 800);
+    </script>
+</body>
+</html>

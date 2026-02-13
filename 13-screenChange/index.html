@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Smooth Shift</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000; 
+            overflow: hidden; 
+        }
+
+        /* CONTAINER WITH DEPTH */
+        .app-container {
+            position: relative;
+            width: 100vw; height: 100vh;
+            background: #000;
+            perspective: 2000px; /* Stronger 3D perspective */
+        }
+
+        /* --- SCREEN 1: WHITE (OUTGOING) --- */
+        .screen-white {
+            position: absolute;
+            width: 100%; height: 100%;
+            background: #ffffff;
+            z-index: 1;
+            transform-origin: center left;
+            /* The 'Luxurious' Easing Curve */
+            transition: 
+                transform 1.6s cubic-bezier(0.83, 0, 0.17, 1),
+                filter 1.6s cubic-bezier(0.83, 0, 0.17, 1),
+                border-radius 1.6s cubic-bezier(0.83, 0, 0.17, 1);
+            will-change: transform, filter, border-radius;
+        }
+
+        /* --- SCREEN 2: BLACK (INCOMING) --- */
+        .screen-black {
+            position: absolute;
+            top: 0; right: 0;
+            width: 100%; height: 100%;
+            background: #000000;
+            z-index: 2;
+            transform: translateX(100%); /* Start off-screen */
+            
+            /* Same Easing */
+            transition: transform 1.6s cubic-bezier(0.83, 0, 0.17, 1);
+            will-change: transform;
+
+            /* Massive, soft shadow for separation */
+            box-shadow: -100px 0 150px rgba(0,0,0,0.5); 
+        }
+
+        /* --- ANIMATION TRIGGER STATES --- */
+        
+        /* 1. White Screen Retreats */
+        .shift-active .screen-white {
+            /* Moves back (-25%) and scales down to 0.85 */
+            transform: translateX(-25%) scale(0.85); 
+            /* Blurs out */
+            filter: brightness(0.5) blur(5px);
+            /* Rounds corners strongly */
+            border-radius: 60px;
+        }
+
+        /* 2. Black Screen Enters */
+        .shift-active .screen-black {
+            transform: translateX(0%);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container" id="app">
+        <div class="screen-white"></div>
+        <div class="screen-black"></div>
+    </div>
+
+    <script>
+        // Trigger automatically after 0.5s
+        setTimeout(() => {
+            document.getElementById('app').classList.add('shift-active');
+        }, 500);
+    </script>
+</body>
+</html>
