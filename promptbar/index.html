@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PhotoGPT - 3D Prompt Interface</title>
+    <title>PhotoGPT - 3D Multimodal Interface</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
     <style>
@@ -16,49 +16,68 @@
             font-family: 'Inter', sans-serif;
         }
 
-        /* 1. BACKGROUND VIDEO */
         #bg-video {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
             object-fit: cover;
             z-index: 0;
-            opacity: 0.6; /* Dimmed to let UI pop */
+            opacity: 0.5; 
         }
 
-        /* 2. THE THREE.JS CONTAINER */
         #container {
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
             z-index: 1;
-            pointer-events: none; /* Let clicks pass through to 3D objects */
+            pointer-events: none;
         }
 
-        /* 3. THE UI CARD DESIGN (Matched to image_926200.png) */
-        /* This is hidden initially, Three.js will grab it and put it in 3D */
+        /* --- UI CARD --- */
         #ui-card {
-            width: 700px;
-            /* Dark Background */
-            background: #121212; 
+            width: 720px;
+            background: rgba(18, 18, 18, 0.95);
             border: 1px solid #333;
-            border-radius: 16px;
-            padding: 20px;
+            border-radius: 20px;
+            padding: 24px;
             display: flex;
             flex-direction: column;
-            gap: 40px; /* Space between text and bottom bar */
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
-            pointer-events: auto; /* Re-enable clicks */
+            gap: 20px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.9), 0 0 0 1px rgba(255,255,255,0.05) inset;
+            pointer-events: auto;
             user-select: none;
+            backdrop-filter: blur(20px);
+            transform-style: preserve-3d;
         }
 
-        /* Text Area */
+        /* --- IMAGE UPLOAD SECTION --- */
+        .image-track {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 5px;
+            min-height: 0;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .img-thumb {
+            width: 80px; height: 80px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 2px solid #333;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+            transform: scale(0.8);
+        }
+
+        /* --- INPUT AREA --- */
         .input-area {
-            font-size: 18px;
+            font-size: 20px;
             line-height: 1.5;
             color: #fff;
-            min-height: 28px;
+            min-height: 30px;
             position: relative;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .placeholder {
@@ -70,55 +89,99 @@
 
         .cursor {
             display: inline-block;
-            width: 2px; height: 18px;
+            width: 2px; height: 24px;
             background: #3b82f6;
             margin-left: 2px;
-            vertical-align: middle;
+            vertical-align: sub;
             animation: blink 1s infinite;
         }
 
-        /* Bottom Toolbar */
+        /* --- TOOLBAR --- */
         .toolbar {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-top: 1px solid #2a2a2a;
+            padding-top: 20px;
         }
 
-        /* Icons */
-        .icon-btn {
-            width: 32px; height: 32px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .icon-btn:hover { background: #2a2a2a; }
-        .icon-btn svg { width: 20px; height: 20px; stroke: #888; fill: none; stroke-width: 2; }
-
-        .right-tools {
+        .left-tools, .right-tools {
             display: flex;
+            gap: 10px;
             align-items: center;
-            gap: 12px;
         }
 
-        /* Generate Button */
+        .icon-btn {
+            width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #1a1a1a;
+            border: 1px solid #2a2a2a;
+        }
+        .icon-btn:hover { background: #2a2a2a; border-color: #444; transform: translateY(-2px); }
+        .icon-btn svg { width: 20px; height: 20px; stroke: #999; stroke-width: 2; }
+        
+        .icon-btn.uploading {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+        .icon-btn.uploading svg { stroke: #fff; }
+
+        /* GENERATE BUTTON */
         .generate-btn {
-            background: #e5e5e5; /* Off-white */
+            background: linear-gradient(135deg, #e5e5e5, #ffffff);
             color: #000;
-            padding: 8px 16px;
-            border-radius: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
             font-weight: 600;
             font-size: 14px;
             display: flex;
             align-items: center;
             gap: 8px;
             cursor: pointer;
-            transition: transform 0.1s, background 0.2s;
+            box-shadow: 0 4px 15px rgba(255,255,255,0.1);
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
         }
-        .generate-btn:hover { background: #fff; transform: scale(1.02); }
-        .generate-btn svg { width: 16px; height: 16px; stroke: #000; }
+        .generate-btn:hover { transform: scale(1.02); box-shadow: 0 6px 20px rgba(255,255,255,0.2); }
+        .generate-btn svg { width: 16px; height: 16px; stroke: #000; transition: transform 0.3s; }
+
+        /* Clicked State */
+        .generate-btn.clicked {
+            background: #3b82f6;
+            color: #fff;
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+            pointer-events: none;
+        }
+        .generate-btn.clicked svg {
+            stroke: #fff;
+            transform: translateX(20px);
+            opacity: 0;
+        }
+        
+        /* Loading Spinner inside button */
+        .spinner {
+            display: none;
+            width: 16px; height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            position: absolute;
+            right: 15px;
+        }
+        .generate-btn.clicked .spinner { display: block; }
 
         @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes popIn { 
+            0% { opacity: 0; transform: scale(0.5) translateY(10px); } 
+            100% { opacity: 1; transform: scale(1) translateY(0); } 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -128,45 +191,38 @@
     </video>
 
     <div id="ui-card">
+        
+        <div class="image-track" id="image-track"></div>
+
         <div class="input-area">
-            <span class="placeholder" id="placeholder">Start typing a prompt...</span>
+            <span class="placeholder" id="placeholder">Describe what you want to generate...</span>
             <span id="typed-text"></span><span class="cursor"></span>
         </div>
 
         <div class="toolbar">
-            <div class="icon-btn">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                    <polyline points="21 15 16 10 5 21"></polyline>
-                </svg>
+            <div class="left-tools">
+                <div class="icon-btn" id="upload-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                </div>
+                <div class="icon-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 20h9"></path>
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                    </svg>
+                </div>
             </div>
 
             <div class="right-tools">
-                <div class="icon-btn">
-                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M15 4V2"></path>
-                        <path d="M15 16v-2"></path>
-                        <path d="M8 9h2"></path>
-                        <path d="M20 9h2"></path>
-                        <path d="M17.8 11.8L19 13"></path>
-                        <path d="M15 9l0 0"></path>
-                        <path d="M17.8 6.2L19 5"></path>
-                        <path d="M3 21l9-9"></path>
-                        <path d="M12.2 6.2L11 5"></path>
-                    </svg>
-                </div>
-                <div class="icon-btn">
-                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                    </svg>
-                </div>
-                <div class="generate-btn">
-                    Generate
+                <div class="generate-btn" id="generate-btn">
+                    <span id="btn-text">Generate</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-5.82 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
                     </svg>
+                    <div class="spinner"></div>
                 </div>
             </div>
         </div>
@@ -187,98 +243,107 @@
         import * as THREE from 'three';
         import { CSS3DRenderer, CSS3DObject } from 'three/addons/renderers/CSS3DRenderer.js';
 
-        // --- CONFIGURATION ---
-        const PROMPT_TEXT = "A cinematic nature reel of a waterfall in the Swiss Alps, 8k resolution, photorealistic lighting...";
+        // --- ANIMATION TIMELINE ---
+        const SCENARIO = [
+            { type: 'wait', ms: 1000 },
+            { type: 'image', src: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=150&h=150&fit=crop' },
+            { type: 'wait', ms: 500 },
+            { type: 'image', src: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=150&h=150&fit=crop' },
+            { type: 'wait', ms: 800 },
+            { type: 'text', content: "Use these references to generate a " },
+            { type: 'text', content: "cinematic waterfall scene " },
+            { type: 'text', content: "with volumetric fog, 8k resolution." },
+            { type: 'wait', ms: 600 },
+            { type: 'click_generate' } // <--- NEW STEP
+        ];
         
         let camera, scene, renderer;
-        let uiObject; // The 3D wrapper for our HTML
+        let uiObject;
 
-        // Track Mouse
-        let mouseX = 0;
-        let mouseY = 0;
-        const windowHalfX = window.innerWidth / 2;
-        const windowHalfY = window.innerHeight / 2;
+        let mouseX = 0, mouseY = 0;
 
         init();
         animate();
-        typewriter();
+        runScenario();
 
         function init() {
             const container = document.getElementById('container');
-
-            // 1. Scene Setup
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 5000);
             camera.position.set(0, 0, 1000);
             scene = new THREE.Scene();
 
-            // 2. Create CSS3D Object
             const element = document.getElementById('ui-card');
-            
-            // Convert DOM element to 3D Object
             uiObject = new CSS3DObject(element);
-            uiObject.position.set(0, 0, 0);
             scene.add(uiObject);
 
-            // 3. Setup CSS3DRenderer
             renderer = new CSS3DRenderer();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            // Append renderer to container
             container.appendChild(renderer.domElement);
 
-            // 4. Events
-            document.addEventListener('mousemove', onDocumentMouseMove);
-            window.addEventListener('resize', onWindowResize);
-        }
-
-        // --- MOUSE TILT LOGIC ---
-        function onDocumentMouseMove(event) {
-            mouseX = (event.clientX - windowHalfX) * 0.5; // Scale down sensitivity
-            mouseY = (event.clientY - windowHalfY) * 0.5;
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX - window.innerWidth/2) * 0.5;
+                mouseY = (e.clientY - window.innerHeight/2) * 0.5;
+            });
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
         }
 
         function animate() {
             requestAnimationFrame(animate);
-
-            // Smooth Rotation interpolation
-            // Rotate the OBJECT, not the camera, for better control
-            const targetX = THREE.MathUtils.degToRad(mouseY * 0.05); // Tilt Up/Down
-            const targetY = THREE.MathUtils.degToRad(mouseX * 0.05); // Tilt Left/Right
-
-            uiObject.rotation.x += (targetX - uiObject.rotation.x) * 0.1;
-            uiObject.rotation.y += (targetY - uiObject.rotation.y) * 0.1;
-
-            // Subtle Float
-            const time = Date.now() * 0.001;
-            uiObject.position.y = Math.sin(time) * 10;
+            uiObject.rotation.x += (THREE.MathUtils.degToRad(mouseY * 0.08) - uiObject.rotation.x) * 0.05;
+            uiObject.rotation.y += (THREE.MathUtils.degToRad(mouseX * 0.08) - uiObject.rotation.y) * 0.05;
+            
+            // Floating
+            const time = Date.now() * 0.0015;
+            uiObject.position.y = Math.sin(time) * 8;
+            uiObject.position.z = Math.cos(time * 0.8) * 10;
 
             renderer.render(scene, camera);
         }
 
-        // --- TYPEWRITER LOGIC ---
-        function typewriter() {
+        // --- SCENARIO RUNNER ---
+        async function runScenario() {
+            const imageTrack = document.getElementById('image-track');
+            const uploadBtn = document.getElementById('upload-btn');
+            const generateBtn = document.getElementById('generate-btn');
+            const btnText = document.getElementById('btn-text');
             const textSpan = document.getElementById('typed-text');
             const placeholder = document.getElementById('placeholder');
-            let i = 0;
 
-            function type() {
-                if (i < PROMPT_TEXT.length) {
-                    if (i === 0) placeholder.style.display = 'none'; // Hide placeholder on first key
-                    textSpan.textContent += PROMPT_TEXT.charAt(i);
-                    i++;
-                    setTimeout(type, 40); // Typing Speed
+            for (const step of SCENARIO) {
+                if (step.type === 'wait') {
+                    await new Promise(r => setTimeout(r, step.ms));
+                } 
+                else if (step.type === 'image') {
+                    uploadBtn.classList.add('uploading');
+                    await new Promise(r => setTimeout(r, 200));
+                    const img = document.createElement('img');
+                    img.src = step.src;
+                    img.className = 'img-thumb';
+                    imageTrack.appendChild(img);
+                    await new Promise(r => setTimeout(r, 300));
+                    uploadBtn.classList.remove('uploading');
+                } 
+                else if (step.type === 'text') {
+                    placeholder.style.display = 'none';
+                    for (let char of step.content) {
+                        textSpan.textContent += char;
+                        await new Promise(r => setTimeout(r, 30 + Math.random() * 40));
+                    }
+                }
+                else if (step.type === 'click_generate') {
+                    // 1. Simulate Click Effect
+                    generateBtn.classList.add('clicked');
+                    
+                    // 2. Change Text to "Generating..."
+                    await new Promise(r => setTimeout(r, 200));
+                    btnText.textContent = "Generating...";
                 }
             }
-            
-            // Start after delay
-            setTimeout(type, 1000);
         }
-
     </script>
 </body>
 </html>
