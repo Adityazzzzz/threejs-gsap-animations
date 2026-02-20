@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Center Shift Typewriter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            /* Flex center is key here */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        .text-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            
+            /* This ensures the text grows from center */
+            text-align: center;
+        }
+
+        .typed-text {
+            font-size: 120px;
+            font-weight: 700;
+            color: #fff;
+            white-space: pre; /* Preserves spaces */
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        /* The Cursor */
+        .cursor {
+            width: 10px;
+            height: 100px;
+            background-color: #fff;
+            margin-left: 10px;
+            animation: blink 0.8s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="text-wrapper">
+            <span class="typed-text" id="display"></span>
+            <div class="cursor"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const fullText = "IS HAAARD";
+            const display = document.getElementById("display");
+            
+            let charIndex = 0;
+            
+            function type() {
+                if (charIndex < fullText.length) {
+                    // Add one character
+                    display.textContent += fullText.charAt(charIndex);
+                    charIndex++;
+                    
+                    // Randomize typing speed for realism (50ms to 150ms)
+                    const randomSpeed = Math.random() * (200 - 50) + 50;
+                    setTimeout(type, randomSpeed);
+                } else {
+                    // Optional: Reset after a pause to loop it
+                    setTimeout(() => {
+                        display.textContent = "";
+                        charIndex = 0;
+                        type();
+                    }, 2000);
+                }
+            }
+
+            // Start after 1 second
+            setTimeout(type, 1000);
+        });
+    </script>
+</body>
+</html>
